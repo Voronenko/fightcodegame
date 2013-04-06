@@ -1,6 +1,6 @@
 /**
     * @fileOverview Asynchronous Robot stub for http://fightcodegame.com/
-    * @author <a href="http://www.voronenko.info/">Vyacheslav Voronenko</a>
+    * @author Vyacheslav Voronenko
     * @version 2013.04.06
     */
 
@@ -48,7 +48,7 @@ var Robot;
                 delete masterStrategy.Idle;
             },
             ScannedRobot: function () {
-                return;
+
                 console.log('Master: cloning');
                 this.getRobot().clone();
                 this.dropPlan(patrolStrategy);
@@ -88,7 +88,6 @@ var Robot;
         Idle: function () {
 //          this.log(fmt('{{angle}} : {{cannonAbsoluteAngle}} : {{cannonRelativeAngle}}',robo));
             var that = this;
-            that.ahead(100);
             LastEnemyTimeout++;
             if (LastEnemyPos !== null) {
                 that.cannonAt(LastEnemyPos)
@@ -98,7 +97,7 @@ var Robot;
             } else {
                 that.turnGunLeft(180);
             }
-
+            that.ahead(100);
         },
 
         HitByBullet: function (ev) {
@@ -186,9 +185,9 @@ var Robot;
           @param updatedRobot {ServerRobot} The id of the record to destroy.
         */
         this.setRobot = function (updatedRobot) {
+            robo = updatedRobot;
             this.id = robo.id;
             this.parentId = robo.parentId;
-            robo = updatedRobot;
         };
 
         /**
@@ -220,7 +219,6 @@ var Robot;
         this.fireAt = fireAt;
         this.turnAt = turnAt;
         this.skip = skip;
-        this.start = skip;
         this.stop = function () {
             robo.stop();
             return skip();
@@ -278,9 +276,10 @@ var Robot;
         /**
          * Rotates your cannon angle by the specified number of degrees
          * @param degrees {int}
+         * @returns  Promise
          */
         function rotateCannon(degrees) {
-            invoke("rotateCannon", degrees);
+           return invoke("rotateCannon", degrees);
         }
 
         /**
@@ -317,7 +316,7 @@ var Robot;
         /**
          * Rotates your robot to the left by the specified number of degrees (equivalent to turn(-1 * degrees))
          * @param degrees {int}
-         * @returns Promise
+         * @returns {Promise}
          */
         function turnLeft(degrees) {
             robo.cannonAbsoluteAngle = robo.cannonAbsoluteAngle - degrees;
@@ -328,7 +327,7 @@ var Robot;
         /**
          * Rotates your robot to the right by the specified number of degrees (equivalent to turn(1 * degrees))
          * @param degrees {int}
-         * @returns Promise
+         * @returns {Promise}
          */
         function turnRight(degrees) {
             robo.cannonAbsoluteAngle = robo.cannonAbsoluteAngle + degrees;
@@ -336,21 +335,28 @@ var Robot;
             return(degrees < 180) ? (invoke("turnRight", degrees)) : (invoke("turnLeft", 360 - degrees));
         }
 
+        /**
+         *
+         * @returns {Promise}
+         */
         function fire() {
-            invoke("fire");
+           return invoke("fire");
         }
 
+        /**
+         *
+         * @returns {Promise}
+         */
         function disappear() {
-            invoke("disappear");
+           return invoke("disappear");
         }
 
         /**
          *
          * @param position
-         * @param nopromise {boolean} Whenever we shouldn't return promise
-         * @returns {Promise}|0
+         * @returns {Promise}
          */
-        function cannonAt(position,nopromise) {
+        function cannonAt(position) {
             var res = null;
             var angleto = angleTo(robo.position, position);
             var normalizedangle = 180 + angleto;
@@ -363,7 +369,6 @@ var Robot;
             } else {
                 res = skip();
             }
-            if (!nopromise) res=0;
             return res;
         }
 
@@ -389,9 +394,15 @@ var Robot;
 
         /** @scope Droid */
         function fireAt(position) {
-            this.cannonAt(position).then(fire());
+          return this.cannonAt(position).then(fire());
         }
 
+        /**
+         *
+         * @param action
+         * @param param1
+         * @returns {Promise}
+         */
         function invoke(action, param1, param2) {
             var promise = new Promise(this);
             robo[action](param1, param2);
@@ -477,6 +488,7 @@ var Robot;
         ticks++;
         if (ticks > MAXTICKS)return;
         if (typeof droids[ev.robot.id] == 'undefined') {
+            console.log('PREVIOUSLY NOT KNOWN DROID '+ ev.robot.id);
             droids[ev.robot.id] = new Droid(ev.robot);
         }
         this.processTurn('Idle', ev);
@@ -611,13 +623,13 @@ var Robot;
     };
     Promise.prototype.resolve = function () {
         var callback = this.callbacks.shift();
-        if (callback && callback.ok) {
+        if (callback && callback.ok && ( typeof callback.ok == 'function' )) {
             callback.ok.apply(this, arguments);
         }
     };
     Promise.prototype.reject = function () {
         var callback = this.callbacks.shift();
-        if (callback && callback.error) {
+        if (callback && callback.error && ( typeof callback.error == 'function' )) {
             callback.error.apply(this, arguments);
         }
     };
