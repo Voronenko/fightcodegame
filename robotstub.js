@@ -48,6 +48,7 @@ var Robot;
                 delete masterStrategy.Idle;
             },
             ScannedRobot: function () {
+                return;
                 console.log('Master: cloning');
                 this.getRobot().clone();
                 this.dropPlan(patrolStrategy);
